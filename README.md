@@ -60,9 +60,11 @@ SCD Type 2 is implemented on top of the Silver layer:
 
 ## Design Decisions
 
-- Page-based sampling instead of strict date filtering: The public HAPI FHIR test server does not reliably support `_lastUpdated` date filtering (many records show as recently updated regardless of actual creation date). To reliably simulate a 2–3 day incremental load, ingestion is limited to a configurable number of pages (`MAX_PAGES`) per run instead.
-- Modular, reusable functions: All processing logic (`fetch_and_load_bronze`, `build_silver_layer`, `apply_scd_type2`) is written as reusable functions that take a `resource_name` parameter, avoiding hardcoded, resource-specific code.
-- Dataflow Gen2 was intentionally not used for JSON-to-table conversion, per assignment requirements — all transformations are done using Spark/PySpark notebooks.
+## Design Decisions
+
+- **Incremental date-based fetching:** The pipeline uses a reusable `run_full_pipeline()` function that automatically determines the current day's time window and fetches only new/updated records using the FHIR `_lastUpdated` filter — no hardcoded dates.
+- **Validating incremental behavior:** Since the public HAPI FHIR test server does not reliably isolate historical data by date (existing records often appear as "recently updated"), a small set of test records were created via the FHIR API across distinct time-windows to validate that date-based incremental fetching and SCD Type 2 change-detection work correctly end-to-end.
+- **Single reusable pipeline entry point:** `run_full_pipeline()` orchestrates the entire flow (Bronze → Silver → SCD Type 2 → Gold) in the required resource order (Patient → Encounter → Observation → Condition), and is the single function triggered by the Fabric Data Pipeline — enabling this to run automatically on any future date without manual changes.
 
 ## How to Run
 
