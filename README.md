@@ -7,30 +7,26 @@ A data ingestion and analytics pipeline that fetches healthcare data from the pu
 This project ingests four core FHIR resources — Patient, Encounter, Observation, and Condition — from the public FHIR API, with pagination support,and builds a layered lakehouse architecture with metadata tracking, deduplication, SCD Type 2 versioning, and reporting-ready Gold tables.
 
 ## Architecture
-FHIR API (hapi.fhir.org)
-│
-▼
-RAW LAYER (Files)
-Raw JSON responses stored as-is, organized by resource and date
-Files/raw/{resource_name}/{date}/page_N.json
-│
-▼
-BRONZE LAYER (Delta Tables)
-Parsed JSON with metadata columns (extraction_timestamp, api_url_or_params)
-bronze_patient, bronze_encounter, bronze_observation, bronze_condition
-│
-▼
-SILVER LAYER (Delta Tables)
-Cleaned, deduplicated data with key fields extracted into columns
-silver_patient, silver_encounter, silver_observation, silver_condition
-│
-├──────────────────────────┐
-▼                          ▼
-GOLD LAYER           SCD TYPE 2 LAYER
-Reporting-ready view Historical version tracking
-gold_patient_summary scd_patient, scd_encounter,
-scd_observation, scd_condition
 
+The pipeline follows a 4-layer Medallion Architecture:
+
+1. **FHIR API** (`hapi.fhir.org`) — source of all data
+
+2. **Raw Layer (Files)**
+   - Raw JSON responses stored as-is, organized by resource and date
+   - Path: `Files/raw/{resource_name}/{date}/page_N.json`
+
+3. **Bronze Layer (Delta Tables)**
+   - Parsed JSON with metadata columns (`extraction_timestamp`, `api_url_or_params`)
+   - Tables: `bronze_patient`, `bronze_encounter`, `bronze_observation`, `bronze_condition`
+
+4. **Silver Layer (Delta Tables)**
+   - Cleaned, deduplicated data with key fields extracted into columns
+   - Tables: `silver_patient`, `silver_encounter`, `silver_observation`, `silver_condition`
+
+5. **Gold Layer & SCD Type 2 Layer** (built from Silver)
+   - **Gold:** Reporting-ready view — `gold_patient_summary`
+   - **SCD Type 2:** Historical version tracking — `scd_patient`, `scd_encounter`, `scd_observation`, `scd_condition`
 
 ## Data Flow / Orchestration
 
@@ -87,10 +83,12 @@ SCD Type 2 is implemented on top of the Silver layer:
 
 ## Project Structure
 
+```
 fhir-medallion-pipeline/
+├── README.md
 ├── notebooks/
-│ └── fhir_medallion_pipeline.ipynb
-├── pipeline/
-│ └── fhir_ingestion_pipeline (Fabric Data Pipeline)
-└── README.md
-
+│   └── fhir_medallion_pipeline.ipynb
+└── pipeline/
+    ├── README.md
+    └── fhir_ingestion_pipeline.zip  (Fabric Data Pipeline export)
+```
